@@ -273,7 +273,7 @@ if(GIT_RESULT EQUAL "0")
 
   if(DUCKDB_DEV_ITERATION EQUAL 0)
     # on a tag; directly use the version
-    set(DUCKDB_VERSION "${SOFT_NAME}${GIT_LAST_TAG}")
+    set(DUCKDB_VERSION "${SOFT_NAME} ${GIT_LAST_TAG}")
   else()
     # not on a tag, increment the patch version by one and add a -devX suffix
     math(EXPR DUCKDB_PATCH_VERSION "${DUCKDB_PATCH_VERSION}+1")
