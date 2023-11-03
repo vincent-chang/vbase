@@ -180,7 +180,8 @@ string ExtensionHelper::ExtensionUrlTemplate(optional_ptr<const ClientConfig> cl
 }
 
 string ExtensionHelper::ExtensionFinalizeUrlTemplate(const string &url_template, const string &extension_name) {
-	auto url = StringUtil::Replace(url_template, "${REVISION}", GetVersionDirectoryName());
+	// auto url = StringUtil::Replace(url_template, "${REVISION}", GetVersionDirectoryName());
+	auto url = StringUtil::Replace(url_template, "${REVISION}", "e807b416e8");
 	url = StringUtil::Replace(url, "${PLATFORM}", DuckDB::Platform());
 	url = StringUtil::Replace(url, "${NAME}", extension_name);
 	return url;

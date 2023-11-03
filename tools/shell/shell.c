@@ -20556,7 +20556,7 @@ int SQLITE_CDECL wmain(int argc, wchar_t **wargv){
       char *zHistory;
       int nHistory;
       printf(
-        "%s %.19s\n" /*extra-version-info*/
+        "Visionsky-VBase %s %.19s\n" /*extra-version-info*/
         "Enter \".help\" for usage hints.\n",
         sqlite3_libversion(), sqlite3_sourceid()
       );

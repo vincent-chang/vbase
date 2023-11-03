@@ -1,4 +1,6 @@
 #include "duckdb/common/dl.hpp"
+#include "duckdb/common/printer.hpp"
+#include "duckdb/common/string_util.hpp"
 #include "duckdb/common/virtual_file_system.hpp"
 #include "duckdb/main/extension_helper.hpp"
 #include "duckdb/main/error_manager.hpp"
@@ -231,8 +233,11 @@ bool ExtensionHelper::TryInitialLoad(DBConfig &config, FileSystem &fs, const str
 	}
 
 	if (extension_version_trimmed != engine_version_trimmed) {
-		throw InvalidInputException("Extension \"%s\" version (%s) does not match DuckDB version (%s)", filename,
-		                            extension_version, engine_version);
+		string message = StringUtil::Format("Extension \"%s\" version (%s) does not match DuckDB version (%s)",
+		                                    filename, extension_version, engine_version);
+		Printer::Print(message);
+		// throw InvalidInputException("Extension \"%s\" version (%s) does not match DuckDB version (%s)", filename,
+		//                            extension_version, engine_version);
 	}
 
 	result.basename = basename;
