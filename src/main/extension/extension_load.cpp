@@ -233,7 +233,7 @@ bool ExtensionHelper::TryInitialLoad(DBConfig &config, FileSystem &fs, const str
 	}
 
 	if (extension_version_trimmed != engine_version_trimmed) {
-		string message = StringUtil::Format("Extension \"%s\" version (%s) does not match DuckDB version (%s)",
+		string message = StringUtil::Format("Warning: Extension \"%s\" version (%s) does not match DuckDB version (%s)",
 		                                    filename, extension_version, engine_version);
 		Printer::Print(message);
 		// throw InvalidInputException("Extension \"%s\" version (%s) does not match DuckDB version (%s)", filename,

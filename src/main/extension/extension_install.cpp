@@ -32,11 +32,13 @@ const string ExtensionHelper::GetVersionDirectoryName() {
 #ifdef DUCKDB_WASM_VERSION
 	return DUCKDB_QUOTE_DEFINE(DUCKDB_WASM_VERSION);
 #endif
+	return "e807b416e8";
+	/*
 	if (IsRelease(DuckDB::LibraryVersion())) {
 		return NormalizeVersionTag(DuckDB::LibraryVersion());
 	} else {
 		return DuckDB::SourceID();
-	}
+	}*/
 }
 
 const vector<string> ExtensionHelper::PathComponents() {
@@ -180,8 +182,7 @@ string ExtensionHelper::ExtensionUrlTemplate(optional_ptr<const ClientConfig> cl
 }
 
 string ExtensionHelper::ExtensionFinalizeUrlTemplate(const string &url_template, const string &extension_name) {
-	// auto url = StringUtil::Replace(url_template, "${REVISION}", GetVersionDirectoryName());
-	auto url = StringUtil::Replace(url_template, "${REVISION}", "e807b416e8");
+	auto url = StringUtil::Replace(url_template, "${REVISION}", GetVersionDirectoryName());
 	url = StringUtil::Replace(url, "${PLATFORM}", DuckDB::Platform());
 	url = StringUtil::Replace(url, "${NAME}", extension_name);
 	return url;
