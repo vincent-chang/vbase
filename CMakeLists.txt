@@ -263,7 +263,7 @@ else()
   message("Git NOT FOUND")
 endif()
 
-set(SOFT_NAME "VBase")
+set(SOFT_NAME "Visionsky-VBase")
 
 if(GIT_RESULT EQUAL "0")
   string(REGEX REPLACE "v([0-9]+).[0-9]+.[0-9]+" "\\1" DUCKDB_MAJOR_VERSION "${GIT_LAST_TAG}")
