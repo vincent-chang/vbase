@@ -477,6 +477,14 @@ if(OS_NAME STREQUAL "windows")
   endif()
 endif()
 
+# 从环境变量读取HADOOP_HOME的值
+set(HADOOP_HOME $ENV{HADOOP_HOME})
+
+# 检查HADOOP_HOME是否被设置
+if(NOT HADOOP_HOME)
+  set(HADOOP_HOME "/opt/hadoop")
+endif()
+
 
 include_directories(src/include)
 include_directories(third_party/fsst)
