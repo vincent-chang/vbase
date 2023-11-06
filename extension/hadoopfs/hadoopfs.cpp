@@ -187,12 +187,17 @@ namespace duckdb {
             return {glob_pattern};
         }
 
+        auto first_slash_pos = glob_pattern.find('/', 7);
+        if (first_slash_pos == string::npos) {
+            return {glob_pattern};
+        }
+
         auto first_slash_before_wildcard = glob_pattern.rfind('/', first_wildcard_pos);
         if (first_slash_before_wildcard == string::npos) {
             return {glob_pattern};
         }
 
-        string shared_path = glob_pattern.substr(0, first_slash_before_wildcard);
+        string shared_path = glob_pattern.substr(first_slash_pos, first_slash_before_wildcard);
         string shared_pattern = glob_pattern.substr(first_slash_before_wildcard + 1);
 
         Printer::Print("Shared path: " + shared_path);
@@ -229,8 +234,8 @@ namespace duckdb {
         auto hdfs_kerberos_param = HDFSKerberosParams::ReadFrom(instance);
 
         auto hdfs_builder = hdfsNewBuilder();
-
         hdfsBuilderSetNameNode(hdfs_builder, hdfs_param.default_namenode.c_str());
+
         if (!hdfs_kerberos_param.principal.empty()) {
             hdfsBuilderSetUserName(hdfs_builder, hdfs_kerberos_param.principal.c_str());
         }
