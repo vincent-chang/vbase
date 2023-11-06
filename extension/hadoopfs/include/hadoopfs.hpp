@@ -14,12 +14,12 @@ namespace duckdb {
 
     using HeaderMap = case_insensitive_map_t<string>;
 
-    struct HDFSEnvironmentCredentialsProvider {
+    struct HDFSEnvironmentSettingsProvider {
         static constexpr const char *HDFS_DEFAULT_NAMENODE = "HDFS_DEFAULT_NAMENODE";
         static constexpr const char *HDFS_PRINCIPAL = "HDFS_PRINCIPAL";
         static constexpr const char *HDFS_KEYTAB_FILE = "HDFS_KEYTAB_FILE";
 
-        explicit HDFSEnvironmentCredentialsProvider(DBConfig &config) : config(config) {};
+        explicit HDFSEnvironmentSettingsProvider(DBConfig &config) : config(config) {};
 
         DBConfig &config;
 

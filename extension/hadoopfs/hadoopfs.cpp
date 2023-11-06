@@ -19,7 +19,7 @@
 namespace duckdb {
 
 
-    void HDFSEnvironmentCredentialsProvider::SetExtensionOptionValue(string key, const char *env_var_name) {
+    void HDFSEnvironmentSettingsProvider::SetExtensionOptionValue(string key, const char *env_var_name) {
         static char *evar;
 
         if ((evar = std::getenv(env_var_name)) != NULL) {
@@ -33,7 +33,7 @@ namespace duckdb {
         }
     }
 
-    void HDFSEnvironmentCredentialsProvider::SetAll() {
+    void HDFSEnvironmentSettingsProvider::SetAll() {
         this->SetExtensionOptionValue(HDFSParams::HDFS_DEFAULT_NAMENODE, this->HDFS_DEFAULT_NAMENODE);
         this->SetExtensionOptionValue(HDFSKerberosParams::HDFS_PRINCIPAL, this->HDFS_PRINCIPAL);
         this->SetExtensionOptionValue(HDFSKerberosParams::HDFS_KEYTAB_FILE, this->HDFS_KEYTAB_FILE);

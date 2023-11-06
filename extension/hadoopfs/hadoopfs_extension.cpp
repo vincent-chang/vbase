@@ -6,8 +6,6 @@
 namespace duckdb {
 
     static void LoadInternal(DatabaseInstance &instance) {
-        auto &fs = instance.GetFileSystem();
-        fs.RegisterSubSystem(make_uniq<HadoopFileSystem>(instance));
 
         auto &config = DBConfig::GetConfig(instance);
 
@@ -16,8 +14,11 @@ namespace duckdb {
         config.AddExtensionOption("hdfs_principal", "principal", LogicalType::VARCHAR);
         config.AddExtensionOption("hdfs_keytab_file", "keytab file", LogicalType::VARCHAR);
 
-        auto provider = make_uniq<HDFSEnvironmentCredentialsProvider>(config);
+        auto provider = make_uniq<HDFSEnvironmentSettingsProvider>(config);
         provider->SetAll();
+
+        auto &fs = instance.GetFileSystem();
+        fs.RegisterSubSystem(make_uniq<HadoopFileSystem>(instance));
     }
 
     void HadoopfsExtension::Load(DuckDB &db) {
