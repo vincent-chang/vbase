@@ -104,20 +104,17 @@ namespace duckdb {
 
     void HadoopFileHandle::Close() {
         Printer::Print("HadoopFileHandle Close." );
-        if (hdfs_stream_builder) {
+        /*if (hdfs_stream_builder) {
             Printer::Print("HadoopFileHandle hdfsStreamBuilderFree." );
             hdfsStreamBuilderFree(hdfs_stream_builder);
-            hdfs_stream_builder = nullptr;
-        }
+        }*/
         if (hdfs_file) {
             Printer::Print("HadoopFileHandle hdfsCloseFile." );
             hdfsCloseFile(hdfs, hdfs_file);
-            hdfs_file = nullptr;
         }
         if (hdfs) {
             Printer::Print("HadoopFileHandle hdfsDisconnect.");
             hdfsDisconnect(hdfs);
-            hdfs = nullptr;
         }
     }
 
@@ -165,7 +162,6 @@ namespace duckdb {
         if (hdfs) {
             Printer::Print("HadoopFileSystem hdfsDisconnect." );
             hdfsDisconnect(hdfs);
-            hdfs = nullptr;
         }
     }
 
@@ -195,7 +191,7 @@ namespace duckdb {
         HadoopFileSystem::ParseUrl(path, path_out, proto_host_port);
 
         Printer::Print("Begin get file info: " + path);
-        hdfsFileInfo *file_info = hdfsGetPathInfo(hdfs, path.c_str());
+        hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, path.c_str());
         if (!file_info) {
             throw IOException("Unable to get file info: " + path);
         }
@@ -221,7 +217,7 @@ namespace duckdb {
             hdfs_flag |= O_WRONLY;
         }
         Printer::Print("Begin hdfsStreamBuilderAlloc: " + path);
-        hadoop_file_handle->hdfs_stream_builder = hdfsStreamBuilderAlloc(fs, path.c_str(), hdfs_flag);
+        hadoop_file_handle->hdfs_stream_builder = hdfsStreamBuilderAlloc(hadoop_file_handle->hdfs, path.c_str(), hdfs_flag);
         if (!hadoop_file_handle->hdfs_stream_builder) {
             throw IOException("Failed to allocate stream builder.");
         }
