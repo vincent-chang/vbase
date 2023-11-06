@@ -221,12 +221,12 @@ namespace duckdb {
                 auto match_path_list = StringUtil::Split(fname.substr(first_slash_before_wildcard + 1), "/");
                 if (is_directory && Match(FileType::FILE_TYPE_DIR,
                                           match_path_list.begin(), match_path_list.end(),
-                                          pattern_list.begin(),pattern_list.begin() + match_path_list.size())) {
+                                          pattern_list.begin(), pattern_list.begin() + match_path_list.size())) {
                     //Printer::Print("Push dir: " + fname);
                     path_list.push_back(fname);
                 } else if (Match(FileType::FILE_TYPE_REGULAR,
                                  match_path_list.begin(), match_path_list.end(),
-                                 pattern_list.begin(),pattern_list.end())) {
+                                 pattern_list.begin(), pattern_list.end())) {
                     //Printer::Print("Push file: " + fname);
                     file_list.push_back(fname);
                 }
@@ -293,20 +293,35 @@ namespace duckdb {
         string path_out, proto_host_port;
         HadoopFileSystem::ParseUrl(path, path_out, proto_host_port);
 
-        hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, path.c_str());
+        hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str());
         if (!file_info) {
-            throw IOException("Unable to get file info: " + path);
-        }
-        if (file_info->mKind == kObjectKindDirectory) {
-            hadoop_file_handle->file_type = FileType::FILE_TYPE_DIR;
-        } else if (file_info->mKind == kObjectKindFile) {
-            hadoop_file_handle->file_type = FileType::FILE_TYPE_REGULAR;
+            if (hadoop_file_handle->flags & FileFlags::FILE_FLAGS_WRITE) {
+                auto last_slash_pos = hadoop_file_handle->path.rfind('/');
+                if (last_slash_pos == string::npos) {
+                    throw IOException("Unable to get file dir: " + path);
+                }
+                auto file_dir = hadoop_file_handle->path.substr(0, last_slash_pos);
+                file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, file_dir.c_str());
+                if (!file_info) {
+                    hdfsCreateDirectory(hadoop_file_handle->hdfs, file_dir.c_str());
+                } else {
+                    hdfsFreeFileInfo(file_info, 1);
+                }
+            } else {
+                throw IOException("Unable to get file info: " + path);
+            }
         } else {
-            hadoop_file_handle->file_type = FileType::FILE_TYPE_INVALID;
+            if (file_info->mKind == kObjectKindDirectory) {
+                hadoop_file_handle->file_type = FileType::FILE_TYPE_DIR;
+            } else if (file_info->mKind == kObjectKindFile) {
+                hadoop_file_handle->file_type = FileType::FILE_TYPE_REGULAR;
+            } else {
+                hadoop_file_handle->file_type = FileType::FILE_TYPE_INVALID;
+            }
+            hadoop_file_handle->length = file_info->mSize;
+            hadoop_file_handle->last_modified = file_info->mLastMod;
+            hdfsFreeFileInfo(file_info, 1);
         }
-        hadoop_file_handle->length = file_info->mSize;
-        hadoop_file_handle->last_modified = file_info->mLastMod;
-        hdfsFreeFileInfo(file_info, 1);
 
         int hdfs_flag = 0;
         if ((flags & FileFlags::FILE_FLAGS_READ) &&
@@ -342,14 +357,21 @@ namespace duckdb {
     }
 
     void HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
-        //auto &hfh = (HadoopFileHandle &) handle;
+        auto &hfh = (HadoopFileHandle &) handle;
         Seek(handle, location);
-        Read(handle, buffer, nr_bytes);
+        auto length = hdfsPread(hfh.hdfs, hfh.hdfs_file, location, buffer, nr_bytes);
+        if (length > 0) {
+            hfh.file_offset += length;
+        }
     }
 
     int64_t HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
         auto &hfh = (HadoopFileHandle &) handle;
-        return hdfsRead(hfh.hdfs, hfh.hdfs_file, buffer, nr_bytes);
+        auto length = hdfsRead(hfh.hdfs, hfh.hdfs_file, buffer, nr_bytes);
+        if (length > 0) {
+            hfh.file_offset += length;
+        }
+        return length;
     }
 
     void HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
