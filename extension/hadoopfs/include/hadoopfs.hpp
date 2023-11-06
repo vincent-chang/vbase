@@ -31,7 +31,7 @@ namespace duckdb {
     struct HDFSParams {
         static constexpr const char  *HDFS_DEFAULT_NAMENODE = "hdfs_default_namenode";
 
-        string default_namenode;
+        string default_namenode = "http://localhost:9000";
 
         static HDFSParams ReadFrom(DatabaseInstance &instance);
         static HDFSParams ReadFrom(FileOpener *opener, FileOpenerInfo &info);
@@ -41,8 +41,8 @@ namespace duckdb {
         static constexpr const char *HDFS_PRINCIPAL = "hdfs_principal";
         static constexpr const char *HDFS_KEYTAB_FILE = "hdfs_keytab_file";
 
-        string principal;
-        string keytab_file;
+        string principal = "";
+        string keytab_file = "";
 
         static HDFSKerberosParams ReadFrom(DatabaseInstance &instance);
         static HDFSKerberosParams ReadFrom(FileOpener *opener, FileOpenerInfo &info);
