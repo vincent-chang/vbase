@@ -353,17 +353,21 @@ namespace duckdb {
     }
 
     void HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
-        throw NotImplementedException("Writing to HDFS files not implemented");
+        Seek(handle, location);
+        Write(handle, buffer, nr_bytes);
     }
 
     int64_t HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes) {
         auto &hfh = (HadoopFileHandle &) handle;
-        Write(handle, buffer, nr_bytes, hfh.file_offset);
-        return nr_bytes;
+        if (!(hfh.flags & FileFlags::FILE_FLAGS_WRITE)) {
+            throw InternalException("Write called on file not opened in write mode");
+        }
+        return hdfsWrite(hfh.hdfs, hfh.hdfs_file, buffer, nr_bytes);
     }
 
     void HadoopFileSystem::FileSync(FileHandle &handle) {
-        throw NotImplementedException("FileSync for HDFS files not implemented");
+        auto &hfh = (HadoopFileHandle &) handle;
+        hdfsHSync(hfh.hdfs, hfh.hdfs_file);
     }
 
     int64_t HadoopFileSystem::GetFileSize(FileHandle &handle) {
