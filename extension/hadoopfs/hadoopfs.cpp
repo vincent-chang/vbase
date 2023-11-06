@@ -102,13 +102,13 @@ namespace duckdb {
     }
 
     void HadoopFileHandle::Close() {
-        if (hdfs_file) {
-            hdfsCloseFile(hdfs, hdfs_file);
-            hdfs_file = nullptr;
-        }
         if (hdfs_stream_builder) {
             hdfsStreamBuilderFree(hdfs_stream_builder);
             hdfs_stream_builder = nullptr;
+        }
+        if (hdfs_file) {
+            hdfsCloseFile(hdfs, hdfs_file);
+            hdfs_file = nullptr;
         }
         if (hdfs) {
             hdfsDisconnect(hdfs);
