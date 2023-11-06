@@ -10,9 +10,9 @@ namespace duckdb {
         auto &config = DBConfig::GetConfig(instance);
 
         // Global HDFS config
-        config.AddExtensionOption("hdfs_default_namenode", "default namenode", LogicalType::VARCHAR);
-        config.AddExtensionOption("hdfs_principal", "principal", LogicalType::VARCHAR);
-        config.AddExtensionOption("hdfs_keytab_file", "keytab file", LogicalType::VARCHAR);
+        config.AddExtensionOption("hdfs_default_namenode", "HDFS default namenode", LogicalType::VARCHAR);
+        config.AddExtensionOption("hdfs_principal", "HDFS kerberos principal", LogicalType::VARCHAR);
+        config.AddExtensionOption("hdfs_keytab_file", "HDFS kerberos keytab file", LogicalType::VARCHAR);
 
         auto provider = make_uniq<HDFSEnvironmentSettingsProvider>(config);
         provider->SetAll();

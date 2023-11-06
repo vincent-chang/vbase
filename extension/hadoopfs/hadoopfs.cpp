@@ -112,6 +112,7 @@ namespace duckdb {
         }
         if (hdfs) {
             hdfsDisconnect(hdfs);
+            hdfs = nullptr;
         }
     }
 
