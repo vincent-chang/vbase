@@ -103,6 +103,20 @@ namespace duckdb {
 
         void FileSync(FileHandle &handle) override;
 
+        void Truncate(FileHandle &handle, int64_t new_size) override;
+
+        bool DirectoryExists(const string &directory) override;
+
+        void CreateDirectory(const string &directory) override;
+
+        void RemoveDirectory(const string &directory) override;
+
+        void MoveFile(const string &source, const string &target) override;
+
+        void RemoveFile(const string &filename) override;
+
+        void Reset(FileHandle &handle) override;
+
         int64_t GetFileSize(FileHandle &handle) override;
 
         time_t GetLastModifiedTime(FileHandle &handle) override;

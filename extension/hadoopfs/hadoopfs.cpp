@@ -375,11 +375,13 @@ namespace duckdb {
     }
 
     void HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
+        throw NotImplementedException("Writing to hdfs files not implemented");
         Seek(handle, location);
         Write(handle, buffer, nr_bytes);
     }
 
     int64_t HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes) {
+        throw NotImplementedException("Writing to hdfs files not implemented");
         auto &hfh = (HadoopFileHandle &) handle;
         if (!(hfh.flags & FileFlags::FILE_FLAGS_WRITE)) {
             throw InternalException("Write called on file not opened in write mode");
@@ -414,7 +416,7 @@ namespace duckdb {
     }
 
     bool HadoopFileSystem::CanHandleFile(const string &fpath) {
-        return fpath.rfind("hdfs://", 0) == 0;
+        return StringUtil::Lower(fpath).rfind("hdfs://", 0) == 0;
     }
 
     void HadoopFileSystem::Seek(FileHandle &handle, idx_t location) {
@@ -426,6 +428,38 @@ namespace duckdb {
     idx_t HadoopFileSystem::SeekPosition(FileHandle &handle) {
         auto &hfh = (HadoopFileHandle &) handle;
         return hfh.file_offset;
+    }
+
+    void HadoopFileSystem::Truncate(FileHandle &handle, int64_t new_size) {
+        auto &hfh = (HadoopFileHandle &) handle;
+        auto result = hdfsTruncateFile(hfh.hdfs, hfh.path.c_str(), new_size);
+        if (result == 0) {
+
+        }
+    }
+
+    bool HadoopFileSystem::DirectoryExists(const string &directory) {
+        return FileExists(directory);
+    }
+
+    void HadoopFileSystem::CreateDirectory(const string &directory) {
+        hdfsCreateDirectory(hdfs, directory.c_str());
+    }
+
+    void HadoopFileSystem::RemoveDirectory(const string &directory) {
+        hdfsDelete(hdfs, directory.c_str(), 1);
+    }
+
+    void HadoopFileSystem::MoveFile(const string &source, const string &target) {
+        hdfsMove(hdfs, source.c_str(), hdfs, target.c_str());
+    }
+
+    void HadoopFileSystem::RemoveFile(const string &filename) {
+        hdfsDelete(hdfs, filename.c_str(), 1);
+    }
+
+    void HadoopFileSystem::Reset(FileHandle &handle) {
+        Seek(handle, 0);
     }
 
 
