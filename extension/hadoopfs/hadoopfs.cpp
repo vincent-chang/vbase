@@ -42,7 +42,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(DatabaseInstance &instance) {
-        string default_namenode = "";
+        string default_namenode = "default";
         Value value;
 
         if (instance.TryGetCurrentSetting(HDFSParams::HDFS_DEFAULT_NAMENODE, value)) {
@@ -53,7 +53,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
-        string default_namenode = "";
+        string default_namenode = "default";
         Value value;
 
         if (FileOpener::TryGetCurrentSetting(opener, HDFSParams::HDFS_DEFAULT_NAMENODE, value, info)) {
@@ -197,7 +197,7 @@ namespace duckdb {
             return {glob_pattern};
         }
 
-        string shared_path = glob_pattern.substr(first_slash_pos, first_slash_before_wildcard - first_slash_pos);
+        string shared_path = glob_pattern.substr(0, first_slash_before_wildcard);
         string shared_pattern = glob_pattern.substr(first_slash_before_wildcard + 1);
 
         Printer::Print("Shared path: " + shared_path);
