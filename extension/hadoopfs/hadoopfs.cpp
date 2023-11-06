@@ -40,7 +40,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(DatabaseInstance &instance) {
-        string default_namenode;
+        string default_namenode = "";
         Value value;
 
         if (instance.TryGetCurrentSetting(HDFSParams::HDFS_DEFAULT_NAMENODE, value)) {
@@ -51,7 +51,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
-        string default_namenode;
+        string default_namenode = "";
         Value value;
 
         if (FileOpener::TryGetCurrentSetting(opener, HDFSParams::HDFS_DEFAULT_NAMENODE, value, info)) {
@@ -62,8 +62,8 @@ namespace duckdb {
     }
 
     HDFSKerberosParams HDFSKerberosParams::ReadFrom(DatabaseInstance &instance) {
-        string principal;
-        string keytab_file;
+        string principal = "";
+        string keytab_file = "";
         Value value;
 
         if (instance.TryGetCurrentSetting(HDFSKerberosParams::HDFS_PRINCIPAL, value)) {
@@ -78,8 +78,8 @@ namespace duckdb {
     }
 
     HDFSKerberosParams HDFSKerberosParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
-        string principal;
-        string keytab_file;
+        string principal = "";
+        string keytab_file = "";
         Value value;
 
         if (FileOpener::TryGetCurrentSetting(opener, HDFSKerberosParams::HDFS_PRINCIPAL, value, info)) {
