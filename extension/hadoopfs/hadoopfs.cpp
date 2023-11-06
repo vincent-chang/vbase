@@ -222,7 +222,7 @@ namespace duckdb {
                 } else if (Match(match_path_list.begin(), match_path_list.end(), pattern_list.begin(),
                                  pattern_list.end())) {
                     //Printer::Print("Push file: " + fname);
-                    file_list.push_back(fname.substr(first_slash_pos));
+                    file_list.push_back(fname);
                 }
             }, opener);
         }
