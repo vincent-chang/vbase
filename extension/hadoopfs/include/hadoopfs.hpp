@@ -1,26 +1,68 @@
 #pragma once
 
 #include "duckdb/common/file_system.hpp"
+#include "duckdb/common/file_opener.hpp"
 #include "duckdb/common/pair.hpp"
 #include "duckdb/common/unordered_map.hpp"
 #include "duckdb/common/case_insensitive_map.hpp"
+#include "duckdb/main/config.hpp"
 #include "duckdb/main/client_data.hpp"
+#include "duckdb/main/database.hpp"
 #include "hdfs.h"
 
 namespace duckdb {
 
     using HeaderMap = case_insensitive_map_t<string>;
 
-    class HadoopFileHandle : public FileHandle {
-    public:
-        HadoopFileHandle(FileSystem &fs, string path, uint8_t flags);
+    struct HDFSEnvironmentCredentialsProvider {
+        static constexpr const char *HDFS_DEFAULT_NAMENODE = "HDFS_DEFAULT_NAMENODE";
+        static constexpr const char *HDFS_PRINCIPAL = "HDFS_PRINCIPAL";
+        static constexpr const char *HDFS_KEYTAB_FILE = "HDFS_KEYTAB_FILE";
 
-        ~HadoopFileHandle() override;
+        explicit HDFSEnvironmentCredentialsProvider(DBConfig &config) : config(config) {};
+
+        DBConfig &config;
+
+        void SetExtensionOptionValue(string key, const char *env_var);
+
+        void SetAll();
+    };
+
+    struct HDFSParams {
+        static constexpr const char  *HDFS_DEFAULT_NAMENODE = "hdfs_default_namenode";
+
+        string default_namenode;
+
+        static HDFSParams ReadFrom(DatabaseInstance &instance);
+        static HDFSParams ReadFrom(FileOpener *opener, FileOpenerInfo &info);
+    };
+
+    struct HDFSKerberosParams {
+        static constexpr const char *HDFS_PRINCIPAL = "hdfs_principal";
+        static constexpr const char *HDFS_KEYTAB_FILE = "hdfs_keytab_file";
+
+        string principal;
+        string keytab_file;
+
+        static HDFSKerberosParams ReadFrom(DatabaseInstance &instance);
+        static HDFSKerberosParams ReadFrom(FileOpener *opener, FileOpenerInfo &info);
+    };
+
+    class HadoopFileSystem;
+
+    class HadoopFileHandle : public FileHandle {
+        friend class HadoopFileSystem;
+
+    public:
+        HadoopFileHandle(FileSystem &fs, string path, uint8_t flags, hdfsFS hdfs);
 
         // This two-phase construction allows subclasses more flexible setup.
         virtual void Initialize(FileOpener *opener);
 
-        // We keep an http client stored for connection reuse with keep-alive headers
+        hdfsStreamBuilder *hdfs_stream_builder = nullptr;
+        hdfsFS  hdfs = nullptr;
+        hdfsFile hdfs_file = nullptr;
+        FileType file_type = FileType::FILE_TYPE_INVALID;
 
         // File handle info
         uint8_t flags;
@@ -28,27 +70,18 @@ namespace duckdb {
         time_t last_modified;
 
         // Read info
-        idx_t buffer_available;
-        idx_t buffer_idx;
         idx_t file_offset;
-        idx_t buffer_start;
-        idx_t buffer_end;
-
-        // Read buffer
-        duckdb::unique_ptr<data_t[]> read_buffer;
-        constexpr static idx_t READ_BUFFER_LEN = 1000000;
 
     public:
-        void Close() override {
-        }
+        void Close() override;
 
-    protected:
-        virtual void InitializeClient();
     };
 
     class HadoopFileSystem : public FileSystem {
     public:
-        static void ParseUrl(string &url, string &path_out, string &proto_host_port_out);
+        static void ParseUrl(const string &url, string &path_out, string &proto_host_port_out);
+
+        explicit HadoopFileSystem(DatabaseInstance &db);
 
         duckdb::unique_ptr<FileHandle> OpenFile(const string &path, uint8_t flags, FileLockType lock = DEFAULT_LOCK,
                                                 FileCompressionType compression = DEFAULT_COMPRESSION,
@@ -57,6 +90,8 @@ namespace duckdb {
         vector<string> Glob(const string &path, FileOpener *opener = nullptr) override {
             return {path}; // FIXME
         }
+
+        FileType GetFileType(FileHandle &handle) override;
 
         void Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) override;
 
@@ -100,12 +135,15 @@ namespace duckdb {
             return "/";
         }
 
-        static void Verify();
+        ~HadoopFileSystem() override;
 
 
     protected:
         virtual duckdb::unique_ptr<HadoopFileHandle> CreateHandle(const string &path, uint8_t flags, FileLockType lock,
                                                                   FileCompressionType compression, FileOpener *opener);
+    private:
+        DatabaseInstance &instance;
+        hdfsFS hdfs;
     };
 
 } // namespace duckdb

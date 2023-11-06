@@ -4,6 +4,7 @@
 #include "duckdb/common/file_opener.hpp"
 #include "duckdb/common/http_state.hpp"
 #include "duckdb/common/thread.hpp"
+#include "duckdb/common/string_util.hpp"
 #include "duckdb/common/types/hash.hpp"
 #include "duckdb/function/scalar/strftime_format.hpp"
 #include "duckdb/main/client_context.hpp"
@@ -17,9 +18,106 @@
 
 namespace duckdb {
 
-    void HadoopFileSystem::ParseUrl(string &url, string &path_out, string &proto_host_port_out) {
-        if (url.rfind("http://", 0) != 0 && url.rfind("https://", 0) != 0) {
-            throw IOException("URL needs to start with http:// or https://");
+
+    void HDFSEnvironmentCredentialsProvider::SetExtensionOptionValue(string key, const char *env_var_name) {
+        static char *evar;
+
+        if ((evar = std::getenv(env_var_name)) != NULL) {
+            if (StringUtil::Lower(evar) == "false") {
+                this->config.SetOption(key, Value(false));
+            } else if (StringUtil::Lower(evar) == "true") {
+                this->config.SetOption(key, Value(true));
+            } else {
+                this->config.SetOption(key, Value(evar));
+            }
+        }
+    }
+
+    void HDFSEnvironmentCredentialsProvider::SetAll() {
+        this->SetExtensionOptionValue(HDFSParams::HDFS_DEFAULT_NAMENODE, this->HDFS_DEFAULT_NAMENODE);
+        this->SetExtensionOptionValue(HDFSKerberosParams::HDFS_PRINCIPAL, this->HDFS_PRINCIPAL);
+        this->SetExtensionOptionValue(HDFSKerberosParams::HDFS_KEYTAB_FILE, this->HDFS_KEYTAB_FILE);
+    }
+
+    HDFSParams HDFSParams::ReadFrom(DatabaseInstance &instance) {
+        string default_namenode;
+        Value value;
+
+        if (instance.TryGetCurrentSetting(HDFSParams::HDFS_DEFAULT_NAMENODE, value)) {
+            default_namenode = value.ToString();
+        }
+
+        return {default_namenode};
+    }
+
+    HDFSParams HDFSParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
+        string default_namenode;
+        Value value;
+
+        if (FileOpener::TryGetCurrentSetting(opener, HDFSParams::HDFS_DEFAULT_NAMENODE, value, info)) {
+            default_namenode = value.ToString();
+        }
+
+        return {default_namenode};
+    }
+
+    HDFSKerberosParams HDFSKerberosParams::ReadFrom(DatabaseInstance &instance) {
+        string principal;
+        string keytab_file;
+        Value value;
+
+        if (instance.TryGetCurrentSetting(HDFSKerberosParams::HDFS_PRINCIPAL, value)) {
+            principal = value.ToString();
+        }
+
+        if (instance.TryGetCurrentSetting(HDFSKerberosParams::HDFS_KEYTAB_FILE, value)) {
+            keytab_file = value.ToString();
+        }
+
+        return {principal, keytab_file};
+    }
+
+    HDFSKerberosParams HDFSKerberosParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
+        string principal;
+        string keytab_file;
+        Value value;
+
+        if (FileOpener::TryGetCurrentSetting(opener, HDFSKerberosParams::HDFS_PRINCIPAL, value, info)) {
+            principal = value.ToString();
+        }
+
+        if (FileOpener::TryGetCurrentSetting(opener, HDFSKerberosParams::HDFS_KEYTAB_FILE, value, info)) {
+            keytab_file = value.ToString();
+        }
+
+        return {principal, keytab_file};
+    }
+
+    HadoopFileHandle::HadoopFileHandle(FileSystem &fs, string path, uint8_t flags, hdfsFS hdfs)
+            : FileHandle(fs, path), flags(flags), hdfs(hdfs), length(0), file_offset(0) {
+    }
+
+    void HadoopFileHandle::Initialize(FileOpener *opener) {
+
+    }
+
+    void HadoopFileHandle::Close() {
+        if (hdfs_file) {
+            hdfsCloseFile(hdfs, hdfs_file);
+            hdfs_file = nullptr;
+        }
+        if (hdfs_stream_builder) {
+            hdfsStreamBuilderFree(hdfs_stream_builder);
+            hdfs_stream_builder = nullptr;
+        }
+        if (hdfs) {
+            hdfsDisconnect(hdfs);
+        }
+    }
+
+    void HadoopFileSystem::ParseUrl(const string &url, string &path_out, string &proto_host_port_out) {
+        if (url.rfind("hdfs://", 0) != 0) {
+            throw IOException("URL needs to start with hdfs://");
         }
         auto slash_pos = url.find('/', 8);
         if (slash_pos == string::npos) {
@@ -34,40 +132,119 @@ namespace duckdb {
         }
     }
 
-    HadoopFileHandle::HadoopFileHandle(FileSystem &fs, string path, uint8_t flags)
-            : FileHandle(fs, path), flags(flags), length(0), buffer_available(0), buffer_idx(0),
-              file_offset(0), buffer_start(0), buffer_end(0) {
+    HadoopFileSystem::HadoopFileSystem(DatabaseInstance &instance) : instance(instance) {
+
+        auto hdfs_param = HDFSParams::ReadFrom(instance);
+        auto hdfs_kerberos_param = HDFSKerberosParams::ReadFrom(instance);
+
+        auto hdfs_builder = hdfsNewBuilder();
+
+        hdfsBuilderSetNameNode(hdfs_builder, hdfs_param.default_namenode.c_str());
+        if (!hdfs_kerberos_param.principal.empty()) {
+            hdfsBuilderSetUserName(hdfs_builder, hdfs_kerberos_param.principal.c_str());
+        }
+
+        if (!hdfs_kerberos_param.keytab_file.empty()) {
+            hdfsBuilderSetKerbTicketCachePath(hdfs_builder, hdfs_kerberos_param.keytab_file.c_str());
+        }
+
+        hdfs = hdfsBuilderConnect(hdfs_builder);
+        if (!hdfs) {
+            throw IOException("Unable to connect to HDFS: " + hdfs_param.default_namenode);
+        }
+
+    }
+
+    HadoopFileSystem::~HadoopFileSystem() {
+        if (hdfs) {
+            hdfsDisconnect(hdfs);
+            hdfs = nullptr;
+        }
     }
 
     unique_ptr<HadoopFileHandle> HadoopFileSystem::CreateHandle(const string &path, uint8_t flags, FileLockType lock,
                                                                 FileCompressionType compression, FileOpener *opener) {
-        D_ASSERT(compression == FileCompressionType::UNCOMPRESSED);
-        return duckdb::make_uniq<HadoopFileHandle>(*this, path, flags);
+        FileOpenerInfo info = {path};
+        auto hdfs_params = HDFSParams::ReadFrom(opener, info);
+        auto hdfs_kerberos_params = HDFSKerberosParams::ReadFrom(opener, info);
+
+        hdfsBuilder *builder = hdfsNewBuilder();
+        hdfsBuilderSetNameNode(builder, path.c_str());
+        if (!hdfs_kerberos_params.principal.empty()) {
+            hdfsBuilderSetUserName(builder, hdfs_kerberos_params.principal.c_str());
+        }
+        if (!hdfs_kerberos_params.keytab_file.empty()) {
+            hdfsBuilderSetKerbTicketCachePath(builder, hdfs_kerberos_params.keytab_file.c_str());
+        }
+        hdfsFS fs = hdfsBuilderConnect(builder);
+        if (!fs) {
+            throw IOException("Unable to connect to HDFS: " + path);
+        }
+        hdfsFreeBuilder(builder);
+
+        auto hadoop_file_handle = duckdb::make_uniq<HadoopFileHandle>(*this, path, flags, fs);
+
+        string path_out, proto_host_port;
+        HadoopFileSystem::ParseUrl(path, path_out, proto_host_port);
+
+        hdfsFileInfo *file_info = hdfsGetPathInfo(hdfs, path.c_str());
+        if (!file_info) {
+            throw IOException("Unable to get file info: " + path);
+        }
+        if (file_info->mKind == kObjectKindDirectory) {
+            hadoop_file_handle->file_type = FileType::FILE_TYPE_DIR;
+        } else if (file_info->mKind == kObjectKindFile) {
+            hadoop_file_handle->file_type = FileType::FILE_TYPE_REGULAR;
+        } else {
+            hadoop_file_handle->file_type = FileType::FILE_TYPE_INVALID;
+        }
+        hadoop_file_handle->length = file_info->mSize;
+        hadoop_file_handle->last_modified = file_info->mLastMod;
+        hdfsFreeFileInfo(file_info, 1);
+
+        int hdfs_flag = 0;
+        if ((flags & FileFlags::FILE_FLAGS_READ) &&
+            ((flags & FileFlags::FILE_FLAGS_WRITE) || (flags & FileFlags::FILE_FLAGS_APPEND))) {
+            hdfs_flag |= O_RDWR;
+        } else if (flags & FileFlags::FILE_FLAGS_READ) {
+            hdfs_flag |= O_RDONLY;
+        } else if ((flags & FileFlags::FILE_FLAGS_WRITE) || (flags & FileFlags::FILE_FLAGS_APPEND)) {
+            hdfs_flag |= O_WRONLY;
+        }
+        hadoop_file_handle->hdfs_stream_builder = hdfsStreamBuilderAlloc(fs, path.c_str(), hdfs_flag);
+        if (!hadoop_file_handle->hdfs_stream_builder) {
+            throw IOException("Failed to allocate stream builder.");
+        }
+        hadoop_file_handle->hdfs_file = hdfsStreamBuilderBuild(hadoop_file_handle->hdfs_stream_builder);
+        if (!hadoop_file_handle->hdfs_file) {
+            throw IOException("Failed to open file.");
+        }
+
+        return hadoop_file_handle;
+    }
+
+    FileType HadoopFileSystem::GetFileType(FileHandle &handle) {
+        auto &hfh = (HadoopFileHandle &) handle;
+        return hfh.file_type;
     }
 
     unique_ptr<FileHandle> HadoopFileSystem::OpenFile(const string &path, uint8_t flags, FileLockType lock,
                                                       FileCompressionType compression, FileOpener *opener) {
-        D_ASSERT(compression == FileCompressionType::UNCOMPRESSED);
 
         auto handle = CreateHandle(path, flags, lock, compression, opener);
         handle->Initialize(opener);
         return std::move(handle);
     }
 
-// Buffered read from http file.
-// Note that buffering is disabled when FileFlags::FILE_FLAGS_DIRECT_IO is set
     void HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
-        auto &hfh = (HadoopFileHandle &) handle;
-        //D_ASSERT(hfh.);
-
+        //auto &hfh = (HadoopFileHandle &) handle;
+        Seek(handle, location);
+        Read(handle, buffer, nr_bytes);
     }
 
     int64_t HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
         auto &hfh = (HadoopFileHandle &) handle;
-        idx_t max_read = hfh.length - hfh.file_offset;
-        nr_bytes = MinValue<idx_t>(max_read, nr_bytes);
-        Read(handle, buffer, nr_bytes, hfh.file_offset);
-        return nr_bytes;
+        return hdfsRead(hfh.hdfs, hfh.hdfs_file, buffer, nr_bytes);
     }
 
     void HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
@@ -90,18 +267,16 @@ namespace duckdb {
     }
 
     time_t HadoopFileSystem::GetLastModifiedTime(FileHandle &handle) {
-        auto &sfh = (HadoopFileHandle &) handle;
-        return sfh.last_modified;
+        auto &hfh = (HadoopFileHandle &) handle;
+        return hfh.last_modified;
     }
 
     bool HadoopFileSystem::FileExists(const string &filename) {
         try {
-            auto handle = OpenFile(filename.c_str(), FileFlags::FILE_FLAGS_READ);
-            auto &sfh = (HadoopFileHandle & ) * handle;
-            if (sfh.length == 0) {
-                return false;
+            if (hdfsExists(hdfs, filename.c_str()) == 0) {
+                return true;
             }
-            return true;
+            return false;
         } catch (...) {
             return false;
         };
@@ -112,26 +287,15 @@ namespace duckdb {
     }
 
     void HadoopFileSystem::Seek(FileHandle &handle, idx_t location) {
-        auto &sfh = (HadoopFileHandle &) handle;
-        sfh.file_offset = location;
+        auto &hfh = (HadoopFileHandle &) handle;
+        hdfsSeek(hfh.hdfs, hfh.hdfs_file, location);
+        hfh.file_offset = location;
     }
 
     idx_t HadoopFileSystem::SeekPosition(FileHandle &handle) {
-        auto &sfh = (HadoopFileHandle &) handle;
-        return sfh.file_offset;
+        auto &hfh = (HadoopFileHandle &) handle;
+        return hfh.file_offset;
     }
 
-    void HadoopFileHandle::Initialize(FileOpener *opener) {
-        InitializeClient();
-        auto &hfs = (HadoopFileSystem &) file_system;
 
-    }
-
-    void HadoopFileHandle::InitializeClient() {
-        string path_out, proto_host_port;
-        //HTTPFileSystem::ParseUrl(path, path_out, proto_host_port);
-        //http_client = HTTPFileSystem::GetClient(this->http_params, proto_host_port.c_str());
-    }
-
-    HadoopFileHandle::~HadoopFileHandle() = default;
 } // namespace duckdb

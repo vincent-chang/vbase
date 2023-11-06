@@ -5,40 +5,39 @@
 
 namespace duckdb {
 
-static void LoadInternal(DatabaseInstance &instance) {
-	auto &fs = instance.GetFileSystem();
+    static void LoadInternal(DatabaseInstance &instance) {
+        auto &fs = instance.GetFileSystem();
+        fs.RegisterSubSystem(make_uniq<HadoopFileSystem>(instance));
 
-	fs.RegisterSubSystem(make_uniq<HadoopFileSystem>());
+        auto &config = DBConfig::GetConfig(instance);
 
-	auto &config = DBConfig::GetConfig(instance);
+        // Global HDFS config
+        config.AddExtensionOption("hdfs_default_namenode", "default namenode", LogicalType::VARCHAR);
+        config.AddExtensionOption("hdfs_principal", "principal", LogicalType::VARCHAR);
+        config.AddExtensionOption("hdfs_keytab_file", "keytab file", LogicalType::VARCHAR);
 
-	// Global HTTP config
-	config.AddExtensionOption("namenode", "namenode", LogicalType::VARCHAR);
-	config.AddExtensionOption("keytab_file", "keytab file", LogicalType::VARCHAR);
-	config.AddExtensionOption("principal", "principal", LogicalType::VARCHAR);
+        auto provider = make_uniq<HDFSEnvironmentCredentialsProvider>(config);
+        provider->SetAll();
+    }
 
+    void HadoopfsExtension::Load(DuckDB &db) {
+        LoadInternal(*db.instance);
+    }
 
-	//auto provider = make_uniq<AWSEnvironmentCredentialsProvider>(config);
-	//provider->SetAll();
-}
-
-void HadoopfsExtension::Load(DuckDB &db) {
-	LoadInternal(*db.instance);
-}
-std::string HadoopfsExtension::Name() {
-	return "hadoopfs";
-}
+    std::string HadoopfsExtension::Name() {
+        return "hadoopfs";
+    }
 
 } // namespace duckdb
 
 extern "C" {
 
 DUCKDB_EXTENSION_API void hadoopfs_init(duckdb::DatabaseInstance &db) {
-	LoadInternal(db);
+    LoadInternal(db);
 }
 
 DUCKDB_EXTENSION_API const char *hadoopfs_version() {
-	return duckdb::DuckDB::LibraryVersion();
+    return duckdb::DuckDB::LibraryVersion();
 }
 }
 
