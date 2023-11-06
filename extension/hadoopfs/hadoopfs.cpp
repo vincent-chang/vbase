@@ -197,7 +197,7 @@ namespace duckdb {
             return {glob_pattern};
         }
 
-        string shared_path = glob_pattern.substr(first_slash_pos, first_slash_before_wildcard);
+        string shared_path = glob_pattern.substr(first_slash_pos, first_slash_before_wildcard - first_slash_pos);
         string shared_pattern = glob_pattern.substr(first_slash_before_wildcard + 1);
 
         Printer::Print("Shared path: " + shared_path);
