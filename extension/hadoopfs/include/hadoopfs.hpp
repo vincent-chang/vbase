@@ -59,7 +59,6 @@ namespace duckdb {
         // This two-phase construction allows subclasses more flexible setup.
         virtual void Initialize(FileOpener *opener);
 
-        hdfsStreamBuilder *hdfs_stream_builder = nullptr;
         hdfsFS  hdfs = nullptr;
         hdfsFile hdfs_file = nullptr;
         FileType file_type = FileType::FILE_TYPE_INVALID;

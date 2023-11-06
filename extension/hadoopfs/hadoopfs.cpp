@@ -217,13 +217,13 @@ namespace duckdb {
             hdfs_flag |= O_WRONLY;
         }
         Printer::Print("Begin hdfsStreamBuilderAlloc: " + path);
-        hadoop_file_handle->hdfs_stream_builder = hdfsStreamBuilderAlloc(hadoop_file_handle->hdfs, path.c_str(), hdfs_flag);
-        if (!hadoop_file_handle->hdfs_stream_builder) {
+        auto hdfs_stream_builder = hdfsStreamBuilderAlloc(hadoop_file_handle->hdfs, path.c_str(), hdfs_flag);
+        if (!hdfs_stream_builder) {
             throw IOException("Failed to allocate stream builder.");
         }
         Printer::Print("End hdfsStreamBuilderAlloc: " + path);
         Printer::Print("Begin hdfsStreamBuilderBuild: " + path);
-        hadoop_file_handle->hdfs_file = hdfsStreamBuilderBuild(hadoop_file_handle->hdfs_stream_builder);
+        hadoop_file_handle->hdfs_file = hdfsStreamBuilderBuild(hdfs_stream_builder);
         if (!hadoop_file_handle->hdfs_file) {
             throw IOException("Failed to open file.");
         }
