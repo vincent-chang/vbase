@@ -214,16 +214,15 @@ namespace duckdb {
             path_list.pop_back();
             Printer::Print("Current path: " + current_path);
             ListFiles(current_path, [&](const string &fname, bool is_directory) {
-                auto full_path = JoinPath(current_path, fname);
-                auto match_path_list = StringUtil::Split(full_path.substr(first_slash_before_wildcard + 1), "/");
+                auto match_path_list = StringUtil::Split(fname.substr(first_slash_before_wildcard + 1), "/");
                 if (is_directory && Match(match_path_list.begin(), match_path_list.end(),
                                           pattern_list.begin(), pattern_list.begin() + match_path_list.size())) {
-                    Printer::Print("Push dir: " + full_path);
-                    path_list.push_back(full_path);
+                    Printer::Print("Push dir: " + fname);
+                    path_list.push_back(fname);
                 } else if (Match(match_path_list.begin(), match_path_list.end(), pattern_list.begin(),
                                  pattern_list.end())) {
-                    Printer::Print("Push file: " + full_path);
-                    file_list.push_back(full_path);
+                    Printer::Print("Push file: " + fname);
+                    file_list.push_back(fname);
                 }
             }, opener);
         }
