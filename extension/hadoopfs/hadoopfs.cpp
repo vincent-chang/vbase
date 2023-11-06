@@ -145,8 +145,8 @@ namespace duckdb {
                 }
                 return false;
             }
-            Printer::PrintF("Match: %s, %d -- %s, %d",
-                            key->data(), key->length(), pattern->data(), pattern->length());
+            //Printer::PrintF("Match: %s, %d -- %s, %d",
+            //                key->data(), key->length(), pattern->data(), pattern->length());
             if (!LikeFun::Glob(key->data(), key->length(), pattern->data(), pattern->length())) {
                 return false;
             }
@@ -167,7 +167,7 @@ namespace duckdb {
         }
 
         for (int i = 0; i < num_entries; ++i) {
-            Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
+            //Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
             callback(file_info[i].mName, file_info[i].mKind == kObjectKindDirectory);
         }
 
@@ -226,6 +226,11 @@ namespace duckdb {
                 }
             }, opener);
         }
+
+        for(duckdb::idx_t idx  = 0; idx < file_list.size(); idx++){
+            Printer::PrintF("Glob %s: %s", glob_pattern, file_list[idx]);
+        }
+
         return file_list;
     }
 
