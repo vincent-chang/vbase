@@ -86,9 +86,10 @@ namespace duckdb {
                                                 FileCompressionType compression = DEFAULT_COMPRESSION,
                                                 FileOpener *opener = nullptr) final;
 
-        vector<string> Glob(const string &path, FileOpener *opener = nullptr) override {
-            return {path}; // FIXME
-        }
+        bool ListFiles(const string &directory, const std::function<void(const string &, bool)> &callback,
+                       FileOpener *opener) override;
+
+        vector<string> Glob(const string &path, FileOpener *opener = nullptr) override;
 
         FileType GetFileType(FileHandle &handle) override;
 

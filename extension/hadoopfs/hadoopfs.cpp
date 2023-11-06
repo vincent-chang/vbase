@@ -8,6 +8,7 @@
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/common/types/hash.hpp"
 #include "duckdb/function/scalar/strftime_format.hpp"
+#include "duckdb/function/scalar/string_functions.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/database.hpp"
 
@@ -126,6 +127,98 @@ namespace duckdb {
         if (path_out.empty()) {
             throw IOException("URL needs to contain a path");
         }
+    }
+
+    static bool Match(vector<string>::const_iterator key, vector<string>::const_iterator key_end,
+                      vector<string>::const_iterator pattern, vector<string>::const_iterator pattern_end) {
+
+        while (key != key_end && pattern != pattern_end) {
+            if (*pattern == "**") {
+                if (std::next(pattern) == pattern_end) {
+                    return true;
+                }
+                while (key != key_end) {
+                    if (Match(key, key_end, std::next(pattern), pattern_end)) {
+                        return true;
+                    }
+                    key++;
+                }
+                return false;
+            }
+            if (!LikeFun::Glob(key->data(), key->length(), pattern->data(), pattern->length())) {
+                return false;
+            }
+            key++;
+            pattern++;
+        }
+        return key == key_end && pattern == pattern_end;
+    }
+
+    bool HadoopFileSystem::ListFiles(const string &directory,
+                                     const std::function<void(const string &, bool)> &callback,
+                                     FileOpener *opener) {
+        int num_entries;
+        hdfsFileInfo *file_info = hdfsListDirectory(hdfs, directory.c_str(), &num_entries);
+        if (file_info == nullptr) {
+            return false;
+        }
+
+        for (int i = 0; i < num_entries; ++i) {
+            callback(file_info[i].mName, file_info[i].mKind == kObjectKindDirectory);
+        }
+
+        hdfsFreeFileInfo(file_info, num_entries);
+
+        return true;
+    }
+
+    vector<string> HadoopFileSystem::Glob(const string &glob_pattern, FileOpener *opener) {
+        if (opener == nullptr) {
+            throw InternalException("Cannot HDFS Glob without FileOpener");
+        }
+
+        FileOpenerInfo info = {glob_pattern};
+
+        // matches on prefix, not glob pattern, so we take a substring until the first wildcard char
+        auto first_wildcard_pos = glob_pattern.find_first_of("*[\\");
+        if (first_wildcard_pos == string::npos) {
+            return {glob_pattern};
+        }
+
+        auto first_slash_before_wildcard = glob_pattern.rfind('/', first_wildcard_pos);
+        if (first_slash_before_wildcard == string::npos) {
+            return {glob_pattern};
+        }
+
+        string shared_path = glob_pattern.substr(0, first_slash_before_wildcard);
+        string shared_pattern = glob_pattern.substr(first_slash_before_wildcard + 1);
+
+        Printer::Print("Shared path: " + shared_path);
+        Printer::Print("Shared pattern: " + shared_pattern);
+
+        auto pattern_list = StringUtil::Split(shared_pattern, "/");
+        vector<string> file_list;
+        vector<string> path_list;
+        path_list.push_back(shared_path);
+        while (!path_list.empty()) {
+            string current_path = path_list.back();
+            path_list.pop_back();
+            Printer::Print("Current path: " + current_path);
+            ListFiles(current_path, [&](const string &fname, bool is_directory) {
+                auto full_path = JoinPath(current_path, fname);
+                auto match_path_list = StringUtil::Split(full_path.substr(first_slash_before_wildcard + 1), "/");
+                if (is_directory && Match(match_path_list.begin(), match_path_list.end(),
+                                          pattern_list.begin(), pattern_list.begin() + match_path_list.size())) {
+                    Printer::Print("Push dir: " + full_path);
+                    path_list.push_back(full_path);
+                } else if (Match(match_path_list.begin(), match_path_list.end(), pattern_list.begin(),
+                                 pattern_list.end())) {
+                    Printer::Print("Push file: " + full_path);
+                    file_list.push_back(full_path);
+                }
+            }, opener);
+        }
+        return file_list;
     }
 
     HadoopFileSystem::HadoopFileSystem(DatabaseInstance &instance) : instance(instance) {
