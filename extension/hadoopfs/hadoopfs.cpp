@@ -159,7 +159,7 @@ namespace duckdb {
     bool HadoopFileSystem::ListFiles(const string &directory,
                                      const std::function<void(const string &, bool)> &callback,
                                      FileOpener *opener) {
-        Printer::Print("ListFiles: " + directory);
+        //Printer::Print("ListFiles: " + directory);
         int num_entries;
         hdfsFileInfo *file_info = hdfsListDirectory(hdfs, directory.c_str(), &num_entries);
         if (file_info == nullptr) {
@@ -202,8 +202,8 @@ namespace duckdb {
         string shared_path = glob_pattern.substr(0, first_slash_before_wildcard);
         string shared_pattern = glob_pattern.substr(first_slash_before_wildcard + 1);
 
-        Printer::Print("Shared path: " + shared_path);
-        Printer::Print("Shared pattern: " + shared_pattern);
+        //Printer::Print("Shared path: " + shared_path);
+        //Printer::Print("Shared pattern: " + shared_pattern);
 
         auto pattern_list = StringUtil::Split(shared_pattern, "/");
         vector<string> file_list;
@@ -212,24 +212,24 @@ namespace duckdb {
         while (!path_list.empty()) {
             string current_path = path_list.back();
             path_list.pop_back();
-            Printer::Print("Current path: " + current_path);
+            //Printer::Print("Current path: " + current_path);
             ListFiles(current_path, [&](const string &fname, bool is_directory) {
                 auto match_path_list = StringUtil::Split(fname.substr(first_slash_before_wildcard + 1), "/");
                 if (is_directory && Match(match_path_list.begin(), match_path_list.end(),
                                           pattern_list.begin(), pattern_list.begin() + match_path_list.size())) {
-                    Printer::Print("Push dir: " + fname);
+                    //Printer::Print("Push dir: " + fname);
                     path_list.push_back(fname);
                 } else if (Match(match_path_list.begin(), match_path_list.end(), pattern_list.begin(),
                                  pattern_list.end())) {
-                    Printer::Print("Push file: " + fname);
-                    file_list.push_back(fname);
+                    //Printer::Print("Push file: " + fname);
+                    file_list.push_back(fname.substr(first_slash_pos));
                 }
             }, opener);
         }
 
-        for(duckdb::idx_t idx  = 0; idx < file_list.size(); idx++){
-            Printer::PrintF("Glob %s: %s", glob_pattern, file_list[idx]);
-        }
+        //for(duckdb::idx_t idx  = 0; idx < file_list.size(); idx++){
+        //    Printer::PrintF("Glob %s: %s", glob_pattern, file_list[idx]);
+        //}
 
         return file_list;
     }
