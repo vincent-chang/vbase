@@ -129,16 +129,20 @@ namespace duckdb {
         }
     }
 
-    static bool Match(vector<string>::const_iterator key, vector<string>::const_iterator key_end,
+    static bool Match(FileType file_type,
+                      vector<string>::const_iterator key, vector<string>::const_iterator key_end,
                       vector<string>::const_iterator pattern, vector<string>::const_iterator pattern_end) {
 
         while (key != key_end && pattern != pattern_end) {
             if (*pattern == "**") {
+                if (file_type == FileType::FILE_TYPE_DIR) {
+                    return true;
+                }
                 if (std::next(pattern) == pattern_end) {
                     return true;
                 }
                 while (key != key_end) {
-                    if (Match(key, key_end, std::next(pattern), pattern_end)) {
+                    if (Match(file_type, key, key_end, std::next(pattern), pattern_end)) {
                         return true;
                     }
                     key++;
@@ -215,12 +219,14 @@ namespace duckdb {
             //Printer::Print("Current path: " + current_path);
             ListFiles(current_path, [&](const string &fname, bool is_directory) {
                 auto match_path_list = StringUtil::Split(fname.substr(first_slash_before_wildcard + 1), "/");
-                if (is_directory && Match(match_path_list.begin(), match_path_list.end(),
-                                          pattern_list.begin(), pattern_list.begin() + match_path_list.size())) {
+                if (is_directory && Match(FileType::FILE_TYPE_DIR,
+                                          match_path_list.begin(), match_path_list.end(),
+                                          pattern_list.begin(),pattern_list.begin() + match_path_list.size())) {
                     //Printer::Print("Push dir: " + fname);
                     path_list.push_back(fname);
-                } else if (Match(match_path_list.begin(), match_path_list.end(), pattern_list.begin(),
-                                 pattern_list.end())) {
+                } else if (Match(FileType::FILE_TYPE_REGULAR,
+                                 match_path_list.begin(), match_path_list.end(),
+                                 pattern_list.begin(),pattern_list.end())) {
                     //Printer::Print("Push file: " + fname);
                     file_list.push_back(fname);
                 }
