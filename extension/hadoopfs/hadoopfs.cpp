@@ -145,6 +145,8 @@ namespace duckdb {
                 }
                 return false;
             }
+            Printer::PrintF("Match: %s, %d -- %s, %d",
+                            key->data(), key->length(), pattern->data(), pattern->length());
             if (!LikeFun::Glob(key->data(), key->length(), pattern->data(), pattern->length())) {
                 return false;
             }
