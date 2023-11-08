@@ -336,6 +336,7 @@ namespace duckdb {
         hadoop_file_handle->hdfs_file =
                 hdfsOpenFile(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str() , hdfs_flag, 0, 0, 0);
         if (!hadoop_file_handle->hdfs_file) {
+            Printer::Print(hdfsGetLastError());
             throw IOException("Failed to open file.");
         }
         return hadoop_file_handle;
