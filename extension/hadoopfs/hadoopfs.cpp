@@ -271,12 +271,13 @@ namespace duckdb {
 
     unique_ptr<HadoopFileHandle> HadoopFileSystem::CreateHandle(const string &path, uint8_t flags, FileLockType lock,
                                                                 FileCompressionType compression, FileOpener *opener) {
+        string path_out, proto_host_port;
+        HadoopFileSystem::ParseUrl(path, path_out, proto_host_port);
         FileOpenerInfo info = {path};
-        auto hdfs_params = HDFSParams::ReadFrom(opener, info);
         auto hdfs_kerberos_params = HDFSKerberosParams::ReadFrom(opener, info);
 
         hdfsBuilder *builder = hdfsNewBuilder();
-        hdfsBuilderSetNameNode(builder, path.c_str());
+        hdfsBuilderSetNameNode(builder, proto_host_port.c_str());
         if (!hdfs_kerberos_params.principal.empty()) {
             hdfsBuilderSetUserName(builder, hdfs_kerberos_params.principal.c_str());
         }
@@ -290,8 +291,6 @@ namespace duckdb {
 
         auto hadoop_file_handle = duckdb::make_uniq<HadoopFileHandle>(*this, path, flags, fs);
 
-        string path_out, proto_host_port;
-        HadoopFileSystem::ParseUrl(path, path_out, proto_host_port);
         hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str());
         if (!file_info) {
             if (hadoop_file_handle->flags & FileFlags::FILE_FLAGS_WRITE) {
