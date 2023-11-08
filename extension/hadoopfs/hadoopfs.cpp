@@ -42,7 +42,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(DatabaseInstance &instance) {
-        string default_namenode = "default";
+        string default_namenode = "hdfs://localhost:9000";
         Value value;
 
         if (instance.TryGetCurrentSetting(HDFSParams::HDFS_DEFAULT_NAMENODE, value)) {
@@ -53,7 +53,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
-        string default_namenode = "default";
+        string default_namenode = "hdfs://localhost:9000";
         Value value;
 
         if (FileOpener::TryGetCurrentSetting(opener, HDFSParams::HDFS_DEFAULT_NAMENODE, value, info)) {
@@ -332,11 +332,8 @@ namespace duckdb {
         } else if ((flags & FileFlags::FILE_FLAGS_WRITE) || (flags & FileFlags::FILE_FLAGS_APPEND)) {
             hdfs_flag |= O_WRONLY;
         }
-        auto hdfs_stream_builder = hdfsStreamBuilderAlloc(hadoop_file_handle->hdfs, path.c_str(), hdfs_flag);
-        if (!hdfs_stream_builder) {
-            throw IOException("Failed to allocate stream builder.");
-        }
-        hadoop_file_handle->hdfs_file = hdfsStreamBuilderBuild(hdfs_stream_builder);
+        hadoop_file_handle->hdfs_file =
+                hdfsOpenFile(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str() , hdfs_flag, 0, 0, 0);
         if (!hadoop_file_handle->hdfs_file) {
             throw IOException("Failed to open file.");
         }
@@ -359,18 +356,12 @@ namespace duckdb {
     void HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
         auto &hfh = (HadoopFileHandle &) handle;
         Seek(handle, location);
-        auto length = hdfsPread(hfh.hdfs, hfh.hdfs_file, location, buffer, nr_bytes);
-        if (length > 0) {
-            hfh.file_offset += length;
-        }
+        auto length = Read(handle, buffer, nr_bytes);
     }
 
     int64_t HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
         auto &hfh = (HadoopFileHandle &) handle;
         auto length = hdfsRead(hfh.hdfs, hfh.hdfs_file, buffer, nr_bytes);
-        if (length > 0) {
-            hfh.file_offset += length;
-        }
         return length;
     }
 
@@ -391,7 +382,7 @@ namespace duckdb {
 
     void HadoopFileSystem::FileSync(FileHandle &handle) {
         auto &hfh = (HadoopFileHandle &) handle;
-        hdfsHSync(hfh.hdfs, hfh.hdfs_file);
+        hdfsSync(hfh.hdfs, hfh.hdfs_file);
     }
 
     int64_t HadoopFileSystem::GetFileSize(FileHandle &handle) {
@@ -422,20 +413,17 @@ namespace duckdb {
     void HadoopFileSystem::Seek(FileHandle &handle, idx_t location) {
         auto &hfh = (HadoopFileHandle &) handle;
         hdfsSeek(hfh.hdfs, hfh.hdfs_file, location);
-        hfh.file_offset = location;
     }
 
     idx_t HadoopFileSystem::SeekPosition(FileHandle &handle) {
         auto &hfh = (HadoopFileHandle &) handle;
-        return hfh.file_offset;
+        return hdfsTell(hfh.hdfs, hfh.hdfs_file);
     }
 
     void HadoopFileSystem::Truncate(FileHandle &handle, int64_t new_size) {
         auto &hfh = (HadoopFileHandle &) handle;
-        auto result = hdfsTruncateFile(hfh.hdfs, hfh.path.c_str(), new_size);
-        if (result == 0) {
-
-        }
+        int should_wait;
+        auto result = hdfsTruncate(hfh.hdfs, hfh.path.c_str(), new_size, &should_wait);
     }
 
     bool HadoopFileSystem::DirectoryExists(const string &directory) {

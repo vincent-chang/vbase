@@ -68,9 +68,6 @@ namespace duckdb {
         idx_t length;
         time_t last_modified;
 
-        // Read info
-        idx_t file_offset;
-
     public:
         void Close() override;
 
