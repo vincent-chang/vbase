@@ -439,7 +439,7 @@ namespace duckdb {
     }
 
     void HadoopFileSystem::MoveFile(const string &source, const string &target) {
-        hdfsMove(hdfs, source.c_str(), hdfs, target.c_str());
+        hdfsRename(hdfs, source.c_str(), target.c_str());
     }
 
     void HadoopFileSystem::RemoveFile(const string &filename) {
