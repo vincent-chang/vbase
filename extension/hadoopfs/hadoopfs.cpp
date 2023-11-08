@@ -173,8 +173,9 @@ namespace duckdb {
         }
 
         for (int i = 0; i < num_entries; ++i) {
-            Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
-            callback(file_info[i].mName, file_info[i].mKind == kObjectKindDirectory);
+            //Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
+            callback(JoinPath(proto_host_port, file_info[i].mName),
+                     file_info[i].mKind == kObjectKindDirectory);
         }
 
         hdfsFreeFileInfo(file_info, num_entries);
