@@ -334,7 +334,7 @@ namespace duckdb {
             hdfs_flag |= O_WRONLY;
         }
         hadoop_file_handle->hdfs_file =
-                hdfsOpenFile(hadoop_file_handle->hdfs, path_out.c_str() , hdfs_flag, 0, 0, 0);
+                hdfsOpenFile(hadoop_file_handle->hdfs, path_out.c_str(), hdfs_flag, 0, 0, 0);
         if (!hadoop_file_handle->hdfs_file) {
             Printer::Print(hdfsGetLastError());
             throw IOException("Failed to open file.");
@@ -357,8 +357,23 @@ namespace duckdb {
 
     void HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
         auto &hfh = (HadoopFileHandle &) handle;
+        Printer::PrintF("location: %d", location);
         Seek(handle, location);
-        auto length = Read(handle, buffer, nr_bytes);
+        Printer::PrintF("location: %d", SeekPosition(handle));
+        auto read_byte_count = 0;
+        while (read_byte_count == nr_bytes) {
+            void *offset_buffer = static_cast<char *>(buffer) + read_byte_count;
+            auto length = Read(handle, offset_buffer, nr_bytes - read_byte_count);
+            if (length > 0) {
+                read_byte_count += length;
+            } else {
+                if (length < 0) {
+                    Printer::Print(hdfsGetLastError());
+                }
+                break;
+            }
+        }
+
     }
 
     int64_t HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes) {
