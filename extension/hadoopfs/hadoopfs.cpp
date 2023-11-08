@@ -291,9 +291,9 @@ namespace duckdb {
         }
 
         auto hadoop_file_handle =
-                duckdb::make_uniq<HadoopFileHandle>(*this, path_out, flags, fs);
+                duckdb::make_uniq<HadoopFileHandle>(*this, path, flags, fs);
 
-        hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str());
+        hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, path_out.c_str());
         if (!file_info) {
             if (hadoop_file_handle->flags & FileFlags::FILE_FLAGS_WRITE) {
                 auto last_slash_pos = hadoop_file_handle->path.rfind('/');
