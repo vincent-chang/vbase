@@ -363,7 +363,7 @@ namespace duckdb {
         Seek(handle, location);
         Printer::PrintF("location-after: %d", SeekPosition(handle));
         auto read_byte_count = 0;
-        while (read_byte_count == nr_bytes) {
+        while (read_byte_count < nr_bytes) {
             void *offset_buffer = static_cast<char *>(buffer) + read_byte_count;
             auto length = Read(handle, offset_buffer, nr_bytes - read_byte_count);
             Printer::PrintF("length: %d", length);
