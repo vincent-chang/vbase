@@ -1,5 +1,7 @@
 # 定义HDFS库的位置
-if (NOT LIBHDFS3_HOME)
+if (NOT "$ENV{LIBHDFS3_HOME}" STREQUAL "")
+    set(LIBHDFS3_HOME ENV{LIBHDFS3_HOME})
+else()
     set(LIBHDFS3_HOME "/opt/libhdfs3")
 endif ()
 set(LIBHDFS3_INCLUDE_DIRS "${LIBHDFS3_HOME}/include")
