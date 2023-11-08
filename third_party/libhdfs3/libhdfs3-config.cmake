@@ -1,5 +1,7 @@
 # 定义HDFS库的位置
-set(LIBHDFS3_HOME "/opt/libhdfs3")
+if (NOT LIBHDFS3_HOME)
+    set(LIBHDFS3_HOME "/opt/libhdfs3")
+endif ()
 set(LIBHDFS3_INCLUDE_DIRS "${LIBHDFS3_HOME}/include")
 set(LIBHDFS3_LIBRARY_DIRS "${LIBHDFS3_HOME}/lib")
 set(LIBHDFS3_LIBRARIES "${LIBHDFS3_LIBRARY_DIRS}/libhdfs3.so")
