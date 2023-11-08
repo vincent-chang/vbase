@@ -163,9 +163,11 @@ namespace duckdb {
     bool HadoopFileSystem::ListFiles(const string &directory,
                                      const std::function<void(const string &, bool)> &callback,
                                      FileOpener *opener) {
+        string path_out, proto_host_port;
+        HadoopFileSystem::ParseUrl(directory, path_out, proto_host_port);
         //Printer::Print("ListFiles: " + directory);
         int num_entries;
-        hdfsFileInfo *file_info = hdfsListDirectory(hdfs, directory.c_str(), &num_entries);
+        hdfsFileInfo *file_info = hdfsListDirectory(hdfs, path_out.c_str(), &num_entries);
         if (file_info == nullptr) {
             return false;
         }
