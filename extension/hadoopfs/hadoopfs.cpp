@@ -357,15 +357,19 @@ namespace duckdb {
 
     void HadoopFileSystem::Read(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
         auto &hfh = (HadoopFileHandle &) handle;
-        Printer::PrintF("location: %d", location);
-        Printer::PrintF("nr_bytes: %d", nr_bytes);
+        Printer::PrintF("nr_bytes-argument: %d", nr_bytes);
+        Printer::PrintF("location-argument: %d", location);
+        Printer::PrintF("location-before: %d", SeekPosition(handle));
         Seek(handle, location);
-        Printer::PrintF("location: %d", SeekPosition(handle));
+        Printer::PrintF("location-after: %d", SeekPosition(handle));
         auto read_byte_count = 0;
         while (read_byte_count == nr_bytes) {
             void *offset_buffer = static_cast<char *>(buffer) + read_byte_count;
             auto length = Read(handle, offset_buffer, nr_bytes - read_byte_count);
             Printer::PrintF("length: %d", length);
+            for(int i = 0; i < length; i++){
+                Printer::PrintF("%X", *(static_cast<char *>(offset_buffer) + i));
+            }
             if (length > 0) {
                 read_byte_count += length;
             } else {
