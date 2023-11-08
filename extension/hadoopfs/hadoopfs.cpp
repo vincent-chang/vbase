@@ -42,7 +42,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(DatabaseInstance &instance) {
-        string default_namenode = "hdfs://localhost:9000";
+        string default_namenode = "default";
         Value value;
 
         if (instance.TryGetCurrentSetting(HDFSParams::HDFS_DEFAULT_NAMENODE, value)) {
@@ -53,7 +53,7 @@ namespace duckdb {
     }
 
     HDFSParams HDFSParams::ReadFrom(FileOpener *opener, FileOpenerInfo &info) {
-        string default_namenode = "hdfs://localhost:9000";
+        string default_namenode = "default";
         Value value;
 
         if (FileOpener::TryGetCurrentSetting(opener, HDFSParams::HDFS_DEFAULT_NAMENODE, value, info)) {
@@ -292,7 +292,6 @@ namespace duckdb {
 
         string path_out, proto_host_port;
         HadoopFileSystem::ParseUrl(path, path_out, proto_host_port);
-
         hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str());
         if (!file_info) {
             if (hadoop_file_handle->flags & FileFlags::FILE_FLAGS_WRITE) {
@@ -308,6 +307,7 @@ namespace duckdb {
                     hdfsFreeFileInfo(file_info, 1);
                 }
             } else {
+                Printer::Print(hdfsGetLastError());
                 throw IOException("Unable to get file info: " + path);
             }
         } else {
