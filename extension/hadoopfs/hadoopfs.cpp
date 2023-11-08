@@ -289,7 +289,8 @@ namespace duckdb {
             throw IOException("Unable to connect to HDFS: " + path);
         }
 
-        auto hadoop_file_handle = duckdb::make_uniq<HadoopFileHandle>(*this, path, flags, fs);
+        auto hadoop_file_handle =
+                duckdb::make_uniq<HadoopFileHandle>(*this, path_out, flags, fs);
 
         hdfsFileInfo *file_info = hdfsGetPathInfo(hadoop_file_handle->hdfs, hadoop_file_handle->path.c_str());
         if (!file_info) {
