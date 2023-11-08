@@ -284,6 +284,7 @@ namespace duckdb {
         if (!hdfs_kerberos_params.keytab_file.empty()) {
             hdfsBuilderSetKerbTicketCachePath(builder, hdfs_kerberos_params.keytab_file.c_str());
         }
+        hdfsBuilderConfSetStr(builder, "dfs.client.read.shortcircuit", "false");
         hdfsFS fs = hdfsBuilderConnect(builder);
         if (!fs) {
             throw IOException("Unable to connect to HDFS: " + path);
