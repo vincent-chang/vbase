@@ -96,7 +96,7 @@ namespace duckdb {
     }
 
     HadoopFileHandle::HadoopFileHandle(FileSystem &fs, string path, uint8_t flags, hdfsFS hdfs)
-            : FileHandle(fs, path), flags(flags), hdfs(hdfs), length(0), file_offset(0) {
+            : FileHandle(fs, path), hdfs(hdfs), flags(flags), length(0) {
     }
 
     void HadoopFileHandle::Initialize(FileOpener *opener) {
