@@ -173,7 +173,7 @@ namespace duckdb {
         }
 
         for (int i = 0; i < num_entries; ++i) {
-            //Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
+            Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
             callback(file_info[i].mName, file_info[i].mKind == kObjectKindDirectory);
         }
 
