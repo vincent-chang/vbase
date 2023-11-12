@@ -3,7 +3,7 @@ import os
 # list all include directories
 include_directories = [
     os.path.sep.join(x.split('/'))
-    for x in ['extension/hadoopfs/include', 'third_party/libhdfs3', 'extension/parquet/include']
+    for x in ['extension/hadoopfs/include', 'third_party/libhdfs3']
 ]
 # source files
 source_files = [
