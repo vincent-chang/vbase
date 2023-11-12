@@ -404,7 +404,17 @@ namespace duckdb {
     void HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes, idx_t location) {
         throw NotImplementedException("Writing to hdfs files not implemented");
         Seek(handle, location);
-        Write(handle, buffer, nr_bytes);
+        auto write_byte_count = 0;
+        while(write_byte_count < nr_bytes) {
+            void *offset_buffer = static_cast<char *>(buffer) + write_byte_count;
+            auto length = Write(handle, offset_buffer, nr_bytes - write_byte_count);
+            if (length >= 0) {
+                write_byte_count += length;
+            } else {
+                Printer::Print(hdfsGetLastError());
+                break;
+            }
+        }
     }
 
     int64_t HadoopFileSystem::Write(FileHandle &handle, void *buffer, int64_t nr_bytes) {
