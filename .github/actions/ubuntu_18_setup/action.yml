@@ -1,0 +1,128 @@
+name: "Setup Ubuntu 18"
+description: "Setup an Ubuntu 18 docker container with the required libraries"
+inputs:
+  python:
+    description: 'Python'
+    default: 0
+  ccache:
+    description: 'Install ccache'
+    default: 0
+  vcpkg:
+    description: 'Install vcpkg'
+    default: 0
+  openssl:
+    description: 'OpenSSL'
+    default: 1
+  protobuf:
+    description: 'Protobuf'
+    default: 1
+  libhdfs3:
+    description: 'Libhdfs3'
+    default: 1
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install
+      shell: bash
+      run: |
+        apt-get update -y -qq
+        apt-get install -y -qq software-properties-common
+        add-apt-repository ppa:git-core/ppa
+        apt-get update -y -qq
+        apt-get install -y -qq make gcc g++ automake autoconf wget curl zip libssl-dev unzip libcurl4-gnutls-dev libexpat1-dev gettext build-essential checkinstall libffi-dev libxml2-dev uuid-dev libgtest-dev libkrb5-dev libgsasl7-dev libboost-all-dev
+
+    - name: Install Git 2.18.5
+      shell: bash
+      run: |
+        wget https://github.com/git/git/archive/refs/tags/v2.18.5.tar.gz
+        tar -xzvf v2.18.5.tar.gz
+        cd git-2.18.5
+        make
+        make prefix=/usr install
+        git --version
+
+    - name: Build OpenSSL 1.1.1
+      if: ${{ inputs.openssl == 1 }}
+      shell: bash
+      run: |
+        wget https://www.openssl.org/source/openssl-1.1.1w.tar.gz 
+        tar -xzvf openssl-1.1.1w.tar.gz
+        cd openssl-1.1.1w
+        ./config --prefix=/usr
+        make
+        make install
+
+    - name: Install CMake 3.21
+      shell: bash
+      run: |
+        wget https://github.com/Kitware/CMake/releases/download/v3.21.3/cmake-3.21.3-linux-x86_64.sh
+        chmod +x cmake-3.21.3-linux-x86_64.sh
+        ./cmake-3.21.3-linux-x86_64.sh --skip-license --prefix=/usr/local
+        cmake --version
+
+    - name: Install Python 3.8
+      if: ${{ inputs.python }} == 1
+      shell: bash
+      run: |
+        wget https://www.python.org/ftp/python/3.8.17/Python-3.8.17.tgz
+        tar xvf Python-3.8.17.tgz
+        cd Python-3.8.17
+        mkdir -p pythonbin
+        ./configure --with-ensurepip=install
+        make -j
+        make install
+        python3.8 --version
+        python3.8 -m pip install pip
+        python3.8 -m pip install requests awscli
+
+    - name: Build Protobuf 3.0.0
+      if: ${{ inputs.protobuf == 1 }}
+      shell: bash
+      run: |
+        wget https://github.com/vincent-chang/protobuf/archive/refs/tags/v3.0.0-autogen-fix.tar.gz
+        tar -xzvf v3.0.0-autogen-fix.tar.gz
+        cd protobuf-3.0.0-autogen-fix
+        ./autogen.sh
+        ./configure --prefix=/usr
+        make
+        make install
+
+    - name: Build Libhdfs3
+      if: ${{ inputs.libhdfs3 == 1 }}
+      shell: bash
+      run: |
+        git clone https://github.com/vincent-chang/libhdfs3.git
+        cd libhdfs3
+        mkdir build
+        cd build
+        ../bootstrap
+        make
+        make install
+        mv ../dist /opt/libhdfs3
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Version Check
+      shell: bash
+      run: |
+        ldd --version ldd
+        python3 --version
+        git --version
+        git log -1 --format=%h
+
+    - name: Setup vcpkg
+      if: ${{ inputs.vcpkg == 1 }}
+      uses: lukka/run-vcpkg@v11.1
+      with:
+        vcpkgGitCommitId: 501db0f17ef6df184fcdbfbe0f87cde2313b6ab1
+
+    - name: Setup Ccache
+      if: ${{ inputs.ccache == 1 }}
+      uses: hendrikmuhs/ccache-action@main
+      with:
+        key: ${{ github.job }}
+        save: ${{ github.ref == 'refs/heads/vbase' || github.repository != 'vincent-chang/duckdb' }}
+

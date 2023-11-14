@@ -4,19 +4,9 @@ on:
   repository_dispatch:
   push:
     branches:
-      - '**'
-      - '!main'
-      - '!feature'
+      - 'vbase'
     tags:
       - '**'
-    paths-ignore:
-      - '**.md'
-      - 'tools/**'
-      - '.github/workflows/**'
-      - '!.github/workflows/LinuxRelease.yml'
-
-  pull_request:
-    types: [opened, reopened, ready_for_review]
     paths-ignore:
       - '**.md'
       - 'tools/**'
@@ -34,12 +24,13 @@ env:
 jobs:
   linux-release-x86_64:
     name: Build on ubuntu18.04 x86_64
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'vincent-chang/libhdfs3'
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/vbase'
     runs-on: ubuntu-latest
     container: ubuntu:18.04
     steps:
       - uses: actions/checkout@v3
         with:
+          ref: vbase
           fetch-depth: 0
       - uses: ./.github/actions/ubuntu_18_setup
         with:
@@ -47,88 +38,15 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          mkdir build
+          make release
+          mkdir -p build/vbase
           cd build
-          ../bootstrap
-          make
-          make install
-          mv ../dist ./libhdfs3
-          tar -czvf libhdfs3.Linux_x86_64.tar.gz libhdfs3
+          cp release/duckdb ./vbase/
+          cp release/src/libduckdb.so ./vbase/
+          ldd release/duckdb |grep -v libc.so| awk '{print $3}'|awk NF|awk '{printf("cp %s vbase/\n",$0)}'|bash
+          tar czvf vbase.tar.gz vbase
       - uses: actions/upload-artifact@v3
         with:
-          name: libhdfs3.Linux_x86_64.tar.gz
+          name: vbase.Linux_x86_64.tar.gz
           path: |
-            build/libhdfs3.Linux_x86_64.tar.gz
-
-  linux-release-aarch64:
-    runs-on: ubuntu-latest
-    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.repository != 'vincent-chang/libhdfs3'
-
-    strategy:
-      matrix:
-        include:
-          - arch: aarch64
-            distro: ubuntu18.04
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - uses: uraimo/run-on-arch-action@v2
-        name: Build artifact
-        id: build
-        with:
-          arch: ${{ matrix.arch }}
-          distro: ${{ matrix.distro }}
-          shell: /bin/bash
-          setup: |
-            mkdir -p "${PWD}/build"
-          dockerRunArgs: |
-            --volume "${PWD}:/opt/libhdfs3-src"
-          env: |
-            artifact_name: libhdfs3.Linux_${{ matrix.arch }}.tar.gz
-          install: |
-            apt-get update -y -qq
-            apt-get install -y -qq software-properties-common
-            add-apt-repository ppa:git-core/ppa
-            apt-get update -y -qq
-            apt-get install -y -qq make cmake gcc g++ automake autoconf wget curl zip libssl-dev unzip libcurl4-gnutls-dev libexpat1-dev gettext build-essential checkinstall libffi-dev libxml2-dev uuid-dev libgtest-dev libkrb5-dev libgsasl7-dev libboost-all-dev
-            cd /opt
-            wget https://github.com/git/git/archive/refs/tags/v2.18.5.tar.gz
-            tar -xzvf v2.18.5.tar.gz
-            cd git-2.18.5
-            make
-            make prefix=/usr install
-            git --version
-            cd /opt
-            wget https://www.openssl.org/source/openssl-1.1.1w.tar.gz 
-            tar -xzvf openssl-1.1.1w.tar.gz
-            cd openssl-1.1.1w
-            ./config --prefix=/usr
-            make
-            make install
-            cd /opt
-            wget https://github.com/vincent-chang/protobuf/archive/refs/tags/v3.0.0-autogen-fix.tar.gz
-            tar -xzvf v3.0.0-autogen-fix.tar.gz
-            cd protobuf-3.0.0-autogen-fix
-            ./autogen.sh
-            ./configure --prefix=/usr
-            make
-            make install
-          run: |
-            cd /opt/libhdfs3-src
-            mkdir -p build
-            cd build
-            ../bootstrap
-            make
-            make install
-            mv ../dist ./libhdfs3
-            tar -czvf ${artifact_name} libhdfs3
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: libhdfs3.Linux_aarch64.tar.gz
-          path: |
-            "${PWD}/build/libhdfs3.Linux_aarch64.tar.gz"
+            build/vbase.Linux_x86_64.tar.gz
