@@ -44,7 +44,7 @@ jobs:
           cp release/duckdb ./vbase/
           cp release/src/libduckdb.so ./vbase/
           ldd release/duckdb |grep -v libc.so| awk '{print $3}'|awk NF|awk '{printf("cp %s vbase/\n",$0)}'|bash
-          tar czvf vbase.tar.gz vbase
+          tar -czvf vbase.Linux_x86_64.tar.gz vbase
       - uses: actions/upload-artifact@v3
         with:
           name: vbase.Linux_x86_64.tar.gz
