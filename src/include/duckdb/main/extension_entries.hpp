@@ -225,6 +225,9 @@ static constexpr ExtensionEntry EXTENSION_SETTINGS[] = {
     {"s3_uploader_max_parts_per_file", "httpfs"},
     {"s3_uploader_thread_limit", "httpfs"},
     {"s3_url_compatibility_mode", "httpfs"},
+    {"hdfs_default_namenode", "hadoopfs"},
+    {"hdfs_principal", "hadoopfs"},
+    {"hdfs_keytab_file", "hadoopfs"},
     {"s3_url_style", "httpfs"},
     {"s3_use_ssl", "httpfs"},
     {"sqlite_all_varchar", "sqlite_scanner"},
@@ -271,6 +274,7 @@ static constexpr ExtensionEntry EXTENSION_COLLATIONS[] = {
 // TODO: automate by passing though to script via duckdb
 static constexpr ExtensionEntry EXTENSION_FILE_PREFIXES[] = {
     {"http://", "httpfs"}, {"https://", "httpfs"}, {"s3://", "httpfs"},
+    {"hdfs://", "hadoopfs"}
     //    {"azure://", "azure"}
 }; // END_OF_EXTENSION_FILE_PREFIXES
 
