@@ -4,7 +4,7 @@ project(HadoopFsExtension)
 
 add_extension_definitions()
 
-include_directories(include ../../third_party/libhdfs3 ../parquet/include)
+include_directories(include ../../third_party/libhdfs3)
 
 build_static_extension(hadoopfs hadoopfs.cpp
                        hadoopfs_extension.cpp)

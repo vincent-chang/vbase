@@ -173,7 +173,10 @@ namespace duckdb {
         }
 
         for (int i = 0; i < num_entries; ++i) {
+<<<<<<< HEAD
             //Printer::PrintF("File: %s, Kind: %d", file_info[i].mName, file_info[i].mKind);
+=======
+>>>>>>> duckdb-hdfs
             callback(JoinPath(proto_host_port, file_info[i].mName),
                      file_info[i].mKind == kObjectKindDirectory);
         }
@@ -190,7 +193,10 @@ namespace duckdb {
 
         FileOpenerInfo info = {glob_pattern};
 
+<<<<<<< HEAD
         // matches on prefix, not glob pattern, so we take a substring until the first wildcard char
+=======
+>>>>>>> duckdb-hdfs
         auto first_wildcard_pos = glob_pattern.find_first_of("*[\\");
         if (first_wildcard_pos == string::npos) {
             return {glob_pattern};
