@@ -2,13 +2,16 @@
 if (NOT "$ENV{LIBHDFS3_HOME}" STREQUAL "")
     set(LIBHDFS3_HOME "$ENV{LIBHDFS3_HOME}")
 else()
-    set(LIBHDFS3_HOME "/usr/lib")
+    set(LIBHDFS3_HOME "/opt/libhdfs3")
 endif ()
 set(LIBHDFS3_INCLUDE_DIRS "${LIBHDFS3_HOME}/include")
 set(LIBHDFS3_LIBRARY_DIRS "${LIBHDFS3_HOME}/lib")
 find_library(LIBHDFS3_LIBRARIES NAMES hdfs3 PATHS "${LIBHDFS3_LIBRARY_DIRS}")
 # 检查文件是否存在
 if (NOT EXISTS "${LIBHDFS3_LIBRARIES}")
+    set(LIBHDFS3_INCLUDE_DIRS "/usr/lib/include")
+    set(LIBHDFS3_LIBRARY_DIRS "${LIBHDFS3_HOME}/lib")
+    find_library(LIBHDFS3_LIBRARIES NAMES hdfs3 PATHS "${LIBHDFS3_LIBRARY_DIRS}")
     message(FATAL_ERROR "LIBHDFS3 library not found at ${LIBHDFS3_LIBRARIES}")
 endif ()
 
